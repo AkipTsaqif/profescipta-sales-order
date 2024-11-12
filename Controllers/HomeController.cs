@@ -23,6 +23,7 @@ namespace Profescipta_Sales_Order.Controllers
             return View();
         }
 
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
