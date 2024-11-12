@@ -1,0 +1,43 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <div class="w-full flex flex-col gap-4">
+        <div class="flex w-full items-start justify-between border-2 border-black p-4 rounded-md">
+            <div class="flex items-center w-1/2 justify-evenly">
+                <span>Keywords</span>
+                <input class="w-1/2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block p-2.5" placeholder="Input keyword to search here" />
+            </div>
+            <div class="flex flex-col items-center w-1/2 justify-evenly gap-4">
+                <div class="flex w-full items-center justify-between">
+                    <span class="w-1/2">Order Date </span>
+                    <input class="w-1/2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block p-2.5" type="date" placeholder="Pick date" />
+                </div>
+                <button class="self-end w-1/3 text-white bg-gradient-to-br from-green-400 to-blue-600 hover:bg-gradient-to-bl font-medium rounded-lg text-sm px-5 py-2.5 text-center">Search</button>
+            </div>
+        </div>
+        <div class="self-start flex gap-4">
+            <button class="bg-red-700 text-white rounded-lg text-sm px-5 py-2.5 text-center w-48">Add new data</button>
+            <button class="bg-blue-600 text-white rounded-lg text-sm px-5 py-2.5 text-center w-48">Export to excel</button>
+        </div>
+        <div>
+            <table class="w-full border-2 border-black">
+                <thead>
+                    <tr class="bg-blue-900">
+                        <th class="px-4 py-2 text-center text-white">No</th>
+                        <th class="px-4 py-2 text-center text-white">Action</th>
+                        <th class="px-4 py-2 text-center text-white">Sales Order</th>
+                        <th class="px-4 py-2 text-center text-white">Order Date</th>
+                        <th class="px-4 py-2 text-center text-white">Customer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="bg-gray">
+                        <td class="px-4 py-2" colspan="5">No sales data available</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
