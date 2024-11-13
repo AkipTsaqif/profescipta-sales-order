@@ -1,0 +1,243 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    ViewData["Title"] = "Sales Details";
+}
+<div class="text-center">
+    <div class="w-full flex flex-col gap-4">
+        <h1 class="font-bold text-xl">Sales Order Information</h1>
+        <div class="flex w-full items-start justify-between border-2 border-black p-4 rounded-md">
+            <div class="flex flex-col w-1/2 gap-2 px-4">
+                <div class="flex items-center w-full justify-between">
+                    <span>Sales Order Number</span>
+                    <input id="salesNumber" class="w-1/2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block p-2.5" placeholder="Input sales order number here" />
+                </div>
+                <div class="flex items-center w-full justify-between">
+                    <span>Order Date </span>
+                    <input id="orderDate" class="w-1/2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block p-2.5" type="date" placeholder="Pick date" />
+                </div>
+            </div>
+            <div class="flex flex-col items-center w-1/2 gap-2 px-4">
+                <div class="flex w-full items-center justify-between">
+                    <span>Customer</span>
+                    <select class="w-3/4 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block p-2.5" name="customers" id="ddlCustomers"></select>
+                </div>
+                <div class="flex w-full items-center justify-between">
+                    <span>Address</span>
+                    <textarea id="address" class="w-3/4 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block p-2.5">Input customer address here</textarea>
+                </div>
+            </div>
+        </div>
+        <h1 class="font-bold text-xl">Detail Items Information</h1>
+        <button id="addItemBtn" class="bg-red-700 text-white font-bold rounded-lg text-sm px-5 py-2.5 text-center w-48">Add item</button>
+        <table id="itemTable" class="w-full border-2 border-black">
+            <thead>
+                <tr class="bg-blue-900">
+                    <th class="px-4 py-2 text-center text-white">No.</th>
+                    <th class="px-4 py-2 text-center text-white">Action</th>
+                    <th class="px-4 py-2 text-center text-white">Item name</th>
+                    <th class="px-4 py-2 text-center text-white">Qty</th>
+                    <th class="px-4 py-2 text-center text-white">Price</th>
+                    <th class="px-4 py-2 text-center text-white w-64">Total</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="px-4 py-2 border text-right">Total Items:</td>
+                    <td id="totalItems" class="px-4 py-2 border text-center font-bold">0</td>
+                    <td class="px-4 py-2 border text-right">Total Price:</td>
+                    <td id="totalPrice" class="px-4 py-2 border text-right font-bold">0</td>
+                </tr>
+            </tfoot>
+        </table>
+        <div class="flex w-full justify-center gap-2 font-bold mx-auto">
+            <button disabled id="saveBtn" class="bg-red-700 text-white rounded-lg text-sm px-5 py-2.5 text-center w-48 opacity-50 cursor-not-allowed">Save</button>
+            <a id="closeBtn" href="@Url.Action("Index", "Home")" class="bg-blue-900 text-white rounded-lg text-sm px-5 py-2.5 text-center w-48">Close</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        fetchCustomers();
+    });
+
+    let rowCount = 1;
+    const addItemBtn = document.getElementById("addItemBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const closeBtn = document.getElementById("closeBtn");
+
+    const fetchCustomers = () => {
+        fetch('/Customer/GetCustomers')
+            .then(response => response.json())
+            .then(data => populateCustomerSelect(data))
+            .catch(error => console.error('Error fetching customers:', error));
+    }
+
+    function populateCustomerSelect(customers) {
+        const selectElement = document.getElementById("ddlCustomers");
+
+        selectElement.innerHTML = "";
+        const placeholderOption = document.createElement("option");
+        placeholderOption.value = "";
+        placeholderOption.textContent = "Select a customer...";
+        placeholderOption.disabled = true;
+        placeholderOption.selected = true;
+        selectElement.appendChild(placeholderOption);
+
+        if (customers.length === 0) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "No customers found";
+            selectElement.appendChild(option);
+        } else {
+            customers.forEach(customer => {
+                const option = document.createElement("option");
+                option.value = customer.comCustomerId;
+                option.textContent = customer.customerName;
+                selectElement.appendChild(option);
+            });
+        }
+    }
+
+    const updateSaveButtonState = (rows) => {
+        if (rows.length === 0) {
+            saveBtn.disabled = true;
+            saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    const newRowFn = () => {
+        const tableBody = document.getElementById("tableBody");
+        
+        addItemBtn.disabled = true;
+        addItemBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+        const newRow = document.createElement("tr");
+        newRow.innerHTML = `
+                    <td class="px-4 py-2 border">${rowCount}</td>
+                    <td class="px-4 py-2 border">
+                        <button onclick="enableRowEdit(this)" class="bg-green-500 text-white px-2 py-1 rounded">Save</button>
+                    </td>
+                    <td class="px-4 py-2 border">
+                        <input type="text" class="form-input w-full" name="ItemName">
+                    </td>
+                    <td class="px-4 py-2 border">
+                        <input type="number" class="form-input w-full" name="Qty" oninput="calculateTotal(this)">
+                    </td>
+                    <td class="px-4 py-2 border">
+                        <input type="number" class="form-input w-full" name="Price" oninput="calculateTotal(this)">
+                    </td>
+                    <td class="px-4 py-2 border w-64 text-right">
+                        <span class="total">0</span>
+                    </td>
+                `;
+
+        tableBody.appendChild(newRow);
+        rowCount++;
+    }
+
+    addItemBtn.addEventListener("click", () => newRowFn());
+    saveBtn.addEventListener("click", () => {
+        const rows = tableBody.querySelectorAll("tr");
+        let tableData = [];
+
+        rows.forEach(row => {
+            const item = {
+                ItemName: row.querySelector("input[name='ItemName']").value,
+                Qty: row.querySelector("input[name='Qty']").value,
+                Price: row.querySelector("input[name='Price']").value
+            }
+            tableData.push(item);
+        });
+
+        saveToDb(tableData);
+    })
+
+    const calculateTotal = (element) => {
+        const row = element.closest("tr");
+        const qty = row.querySelector("input[name='Qty']").value || 0;
+        const price = row.querySelector("input[name='Price']").value || 0;
+        const total = qty * price;
+        row.querySelector(".total").innerText = total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    const updateTotals = () => {
+        let totalQty = 0;
+        let totalAmount = 0;
+
+        const rows = tableBody.querySelectorAll('tr');
+        rows.forEach(row => {
+            const qty = parseFloat(row.querySelector('[name="Qty"]').value) || 0;
+            const price = parseFloat(row.querySelector('[name="Price"]').value) || 0;
+            totalQty += qty;
+            totalAmount += qty * price;
+        });
+
+        totalItems.innerText = totalQty;
+        totalPrice.innerText = totalAmount.toLocaleString();
+    }
+
+    const enableRowEdit = (button) => {
+        const tableBody = document.getElementById("tableBody");
+        const rows = tableBody.querySelectorAll("tr");
+        const row = button.closest("tr");
+
+        updateSaveButtonState(rows);
+        button.textContent = "Edit";
+        button.onclick = () => disableRowEdit(button);
+        row.querySelectorAll("input").forEach(input => input.disabled = true);
+        updateTotals();
+        addItemBtn.disabled = false;
+        addItemBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    const disableRowEdit = (button) => {
+        const row = button.closest("tr");
+        button.textContent = "Save";
+        button.onclick = () => enableRowEdit(button);
+        row.querySelectorAll("input").forEach(input => input.disabled = false);
+    }
+
+    const saveToDb = (items) => {
+        const OrderNo = document.getElementById("salesNumber").value;
+        const OrderDate = document.getElementById("orderDate").value;
+        const ComCustomerId = document.getElementById("ddlCustomers").value;
+        const Address = document.getElementById("address").value;
+
+        const data = {
+            SalesHeader: {
+                OrderNo,
+                OrderDate,
+                ComCustomerId,
+                Address
+            },
+            Items: items
+        }
+
+        fetch('/Sales/SaveSales', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('There is an error during submitting the sales data');
+            }
+            return response.text();
+        }).then(data => {
+            console.log('Success:', data);
+            closeBtn.click();
+        }).catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+</script>
