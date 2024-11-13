@@ -17,8 +17,24 @@ namespace Profescipta_Sales_Order.Controllers
             return View();
         }
 
-        public IActionResult SalesDetails()
+        public IActionResult SalesDetails(string? orderNo)
         {
+            if (!string.IsNullOrEmpty(orderNo))
+            {
+                try { 
+                    var sale = GetSalesDetail(Int32.Parse(orderNo));
+                    if (sale == null)
+                    {
+                        return NotFound();
+                    }
+
+                    return View(sale);
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, ex.Message);
+                }
+            }
             return View();
         }
 
@@ -37,29 +53,28 @@ namespace Profescipta_Sales_Order.Controllers
         }
 
         [HttpGet]
-        public JsonResult GetSalesDetail(int id)
+        public Order GetSalesDetail(int id)
         {
             try
             {
                 var salesHeader = _context.SoOrders.Where(o => o.SoOrderId == id).FirstOrDefault();
                 if (salesHeader == null)
                 {
-                    return Json(new { statusCode = 404, message = "Sales order not found." });
+                    return null;
                 }
 
                 var salesDetail = _context.SoItems.Where(o => o.SoOrderId == id).ToList();
-                Order order = new Order
+                Order order = new()
                 {
                     SalesHeader = salesHeader,
                     Items = salesDetail
                 };
 
-                return Json(order);
+                return order;
             }
             catch (Exception ex)
             {
-                return Json(new { statusCode = 500, message = ex });
-
+                throw;
             }
         }
 
@@ -84,18 +99,14 @@ namespace Profescipta_Sales_Order.Controllers
                     existingOrder.ComCustomerId = order.SalesHeader.ComCustomerId;
                     existingOrder.Address = order.SalesHeader.Address;
 
-                    var existingItemIds = order.Items.Select(i => i.SoItemId).ToList();
-                    var itemsToRemove = _context.SoItems
-                        .Where(i => i.SoOrderId == existingOrder.SoOrderId && !existingItemIds.Contains(i.SoItemId))
-                        .ToList();
-
-                    _context.SoItems.RemoveRange(itemsToRemove);
+                    var existingItems = _context.SoItems
+                                        .Where(i => i.SoOrderId == existingOrder.SoOrderId)
+                                        .ToList();
 
                     foreach (var item in order.Items)
                     {
-                        var existingItem = _context.SoItems
-                            .Where(i => i.SoItemId == item.SoItemId && i.SoOrderId == existingOrder.SoOrderId)
-                            .FirstOrDefault();
+                        var existingItem = existingItems
+                                            .FirstOrDefault(i => i.SoItemId == item.SoItemId);
 
                         if (existingItem != null)
                         {
@@ -109,6 +120,13 @@ namespace Profescipta_Sales_Order.Controllers
                             _context.SoItems.Add(item);
                         }
                     }
+
+                    var incomingItemIds = order.Items.Select(i => i.SoItemId).ToHashSet();
+                    var itemsToRemove = existingItems
+                                        .Where(i => !incomingItemIds.Contains(i.SoItemId))
+                                        .ToList();
+
+                    _context.SoItems.RemoveRange(itemsToRemove);
                 }
                 else
                 {
@@ -133,6 +151,36 @@ namespace Profescipta_Sales_Order.Controllers
             }
 
             return Ok("Sales order successfully made");
+        }
+
+        [HttpDelete]
+        public IActionResult DeleteSales(string? orderNo)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(orderNo))
+                {
+                    return BadRequest("No order number being submitted");
+                }
+
+                int id = Int32.Parse(orderNo);
+                var salesHeader = _context.SoOrders.Where(o => o.SoOrderId == id).FirstOrDefault();
+                if (salesHeader == null)
+                {
+                    return NotFound();
+                }
+
+                var salesDetail = _context.SoItems.Where(o => o.SoOrderId == id).ToList();
+                _context.SoItems.RemoveRange(salesDetail);
+                _context.SoOrders.Remove(salesHeader);
+                _context.SaveChanges();
+
+                return Ok("Sales order successfully deleted");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
     }
 }

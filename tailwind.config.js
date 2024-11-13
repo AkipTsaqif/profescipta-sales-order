@@ -7,9 +7,11 @@ module.exports = {
         './wwwroot/**/*.js'
     ],
     safelist: [
+        "bg-blue-900",
+        "hover:bg-blue-700",
         { pattern: /^p-/ },
         { pattern: /^m-/ },
-        { pattern: /^w-/ }
+        { pattern: /^w-/ },
     ],
     theme: {
         extend: {},

@@ -19,7 +19,7 @@
         </div>
         <div class="self-start flex gap-4">
             <a href="@Url.Action("SalesDetails", "Sales")" class="bg-red-700 hover:bg-red-600 text-white rounded-lg text-sm px-5 py-2.5 text-center w-48">Add new data</a>
-            <button id="excelBtn" class="bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm px-5 py-2.5 text-center w-48">Export to excel</button>
+            <button id="excelBtn" class="bg-blue-900 hover:bg-blue-700 text-white rounded-lg text-sm px-5 py-2.5 text-center w-48">Export to excel</button>
         </div>
         <div>
             <table class="w-full border-2 border-black">
@@ -101,8 +101,8 @@
                 row.innerHTML = `
                     <td class="px-4 py-2 text-center">${index + 1}</td>
                     <td class="px-4 py-2 text-center flex items-center justify-center gap-2">
-                            <a href="${editUrl}", "Sales")" class="bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded w-24">Edit</a>
-                        <a class="bg-red-700 hover:bg-red-600 text-white py-1 px-3 rounded w-24">Delete</a>
+                        <a href="${editUrl}", "Sales")" class="bg-blue-900 hover:bg-blue-700 text-white py-1 px-3 rounded w-24">Edit</a>
+                        <button id="deleteBtn" onclick="deleteSale('${sale.soOrderId}', event)" class="bg-red-700 hover:bg-red-600 text-white py-1 px-3 rounded w-24">Delete</button>
                     </td>
                     <td class="px-4 py-2 text-center">${sale.orderNo}</td>
                     <td class="px-4 py-2 text-center">${new Date(sale.orderDate).toLocaleDateString()}</td>
@@ -116,7 +116,6 @@
             tableBody.appendChild(noDataRow);
         }
     };
-
 
     const getCustomerById = async (custId) => {
         try {
@@ -153,6 +152,28 @@
 
             return matchesKeyword && matchesDate;
         }).map(({ sale }) => sale);
+    };
+
+    const deleteSale = async (orderNo, event) => {
+        event.preventDefault();
+
+        const confirmed = confirm("Are you sure you want to delete this sale?");
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`/Sales/DeleteSales?orderNo=${encodeURIComponent(orderNo)}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                alert("Sale deleted successfully.");
+                fetchSales();
+            } else {
+                console.error("Failed to delete sale:", response.statusText);
+            }
+        } catch (error) {
+            console.error("Error deleting sale:", error);
+        }
     };
 
     const downloadExcel = (jsonData, filename = 'data.xlsx') => {
