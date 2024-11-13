@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using Profescipta_Sales_Order.Models;
+
 namespace Profescipta_Sales_Order
 {
     public class Program
@@ -6,6 +9,7 @@ namespace Profescipta_Sales_Order
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Services.AddDbContext<SOContext>(o => o.UseSqlServer(builder.Configuration.GetConnectionString("DbConnection")));
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 

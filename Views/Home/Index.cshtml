@@ -1,5 +1,5 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Sales Order";
 }
 
 <div class="text-center">
@@ -7,19 +7,19 @@
         <div class="flex w-full items-start justify-between border-2 border-black p-4 rounded-md">
             <div class="flex items-center w-1/2 justify-evenly">
                 <span>Keywords</span>
-                <input class="w-1/2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block p-2.5" placeholder="Input keyword to search here" />
+                <input id="keyword" class="w-1/2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block p-2.5" placeholder="Input keyword to search here" />
             </div>
             <div class="flex flex-col items-center w-1/2 justify-evenly gap-4">
                 <div class="flex w-full items-center justify-between">
                     <span class="w-1/2">Order Date </span>
-                    <input class="w-1/2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block p-2.5" type="date" placeholder="Pick date" />
+                    <input id="date" class="w-1/2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block p-2.5" type="date" placeholder="Pick date" />
                 </div>
-                <button class="self-end w-1/3 text-white bg-gradient-to-br from-green-400 to-blue-600 hover:bg-gradient-to-bl font-medium rounded-lg text-sm px-5 py-2.5 text-center">Search</button>
+                <button id="searchBtn" class="self-end w-1/3 text-white bg-red-700 hover:bg-red-600 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Search</button>
             </div>
         </div>
         <div class="self-start flex gap-4">
-            <a href="@Url.Action("SalesDetails", "Sales")" class="bg-red-700 text-white rounded-lg text-sm px-5 py-2.5 text-center w-48">Add new data</a>
-            <button class="bg-blue-600 text-white rounded-lg text-sm px-5 py-2.5 text-center w-48">Export to excel</button>
+            <a href="@Url.Action("SalesDetails", "Sales")" class="bg-red-700 hover:bg-red-600 text-white rounded-lg text-sm px-5 py-2.5 text-center w-48">Add new data</a>
+            <button id="excelBtn" class="bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm px-5 py-2.5 text-center w-48">Export to excel</button>
         </div>
         <div>
             <table class="w-full border-2 border-black">
@@ -32,8 +32,8 @@
                         <th class="px-4 py-2 text-center text-white">Customer</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr class="bg-gray">
+                <tbody id="salesTableBody">
+                    <tr id="noDataRow" class="bg-gray">
                         <td class="px-4 py-2" colspan="5">No sales data available</td>
                     </tr>
                 </tbody>
@@ -43,4 +43,122 @@
 </div>
 
 <script>
+    document.addEventListener("DOMContentLoaded", () => {
+        fetchSales();
+    });
+    
+    let salesData = [];
+    let filteredSalesData = []
+
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+        const keyword = document.getElementById('keyword').value;
+        const date = document.getElementById('date').value;
+
+        const filteredSales = await searchSales(keyword, date);
+        filteredSalesData = filteredSales
+        populateTable(filteredSales);
+    });
+
+    document.getElementById('excelBtn').addEventListener('click', () => {
+        downloadExcel(filteredSalesData);
+    })
+
+    const fetchSales = () => {
+        fetch('/Sales/GetSales')
+            .then(response => response.json())
+            .then(data => {
+                populateTable(data);
+                salesData = data;
+                filteredSalesData = data;
+            })
+            .catch(error => {
+                console.error('Error fetching sales data:', error);
+            });
+    }
+
+    const populateTable = async (sales) => {
+        const tableBody = document.getElementById('salesTableBody');
+        const noDataRow = document.getElementById('noDataRow') || document.createElement('tr');
+        tableBody.innerHTML = '';
+
+        if (sales.length > 0) {
+            if (!noDataRow.id) {
+                noDataRow.id = 'noDataRow';
+                noDataRow.innerHTML = '<td class="px-4 py-2" colspan="5">No sales data available</td>';
+            }
+
+            noDataRow.style.display = 'none';
+
+            const baseEditUrl = '@Url.Action("SalesDetails", "Sales")';
+
+            for (let [index, sale] of sales.entries()) {
+                const row = document.createElement('tr');
+                row.classList.add(index % 2 === 0 ? 'bg-white' : 'bg-gray');
+
+                let customer = await getCustomerById(sale.comCustomerId);
+                const editUrl = `${baseEditUrl}?orderNo=${encodeURIComponent(sale.soOrderId)}`;
+
+                row.innerHTML = `
+                    <td class="px-4 py-2 text-center">${index + 1}</td>
+                    <td class="px-4 py-2 text-center flex items-center justify-center gap-2">
+                            <a href="${editUrl}", "Sales")" class="bg-blue-600 hover:bg-blue-500 text-white py-1 px-3 rounded w-24">Edit</a>
+                        <a class="bg-red-700 hover:bg-red-600 text-white py-1 px-3 rounded w-24">Delete</a>
+                    </td>
+                    <td class="px-4 py-2 text-center">${sale.orderNo}</td>
+                    <td class="px-4 py-2 text-center">${new Date(sale.orderDate).toLocaleDateString()}</td>
+                    <td class="px-4 py-2 text-center">${customer.customerName}</td>
+                `;
+
+                tableBody.appendChild(row);
+            }
+        } else {
+            noDataRow.style.display = 'table-row';
+            tableBody.appendChild(noDataRow);
+        }
+    };
+
+
+    const getCustomerById = async (custId) => {
+        try {
+            const response = await fetch(`/Customer/GetCustomerById/${custId}`);
+            const data = await response.json();
+
+            console.log("Fetched customer data:", data);
+
+            if (response.ok) {
+                return data;
+            } else {
+                throw new Error('Failed to fetch customer data');
+            }
+        } catch (error) {
+            console.error('Error fetching customer data:', error);
+            return null;
+        }
+    }
+
+    const searchSales = async (keyword, date) => {
+        const salesWithCustomers = await Promise.all(salesData.map(async (sale) => {
+            const customer = await getCustomerById(sale.comCustomerId);
+            return { sale, customer }; 
+        }));
+
+        return salesWithCustomers.filter(({ sale, customer }) => {
+            const matchesKeyword = keyword ? (
+                sale.orderNo.toLowerCase().includes(keyword.toLowerCase()) ||
+                customer.customerName.toLowerCase().includes(keyword.toLowerCase())
+            ) : true;
+
+            const orderDateString = sale.orderDate.split('T')[0];
+            const matchesDate = date ? orderDateString === date : true;
+
+            return matchesKeyword && matchesDate;
+        }).map(({ sale }) => sale);
+    };
+
+    const downloadExcel = (jsonData, filename = 'data.xlsx') => {
+        const worksheet = XLSX.utils.json_to_sheet(jsonData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+        XLSX.writeFile(workbook, filename);
+    }
 </script>
